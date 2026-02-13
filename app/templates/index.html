@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBSC Demo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Device Bound Session Credentials Demo</h1>
+    <p class="subtitle">Chrome 145+</p>
+
+    <!-- Login -->
+    <section id="login-section" {% if logged_in %}class="hidden"{% endif %}>
+      <h2>Login</h2>
+      <div class="form-row">
+        <input type="text" id="username" value="admin" placeholder="Username">
+        <input type="password" id="password" value="password" placeholder="Password">
+        <button onclick="doLogin()">Login</button>
+      </div>
+    </section>
+
+    <!-- Session Status -->
+    <section id="status-section" {% if not logged_in %}class="hidden"{% endif %}>
+      <h2>Session Status</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="label">Authenticated</span>
+          <span id="auth-status" class="value">--</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Session ID</span>
+          <span id="session-id" class="value">--</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Cookie Present</span>
+          <span id="cookie-status" class="value">--</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Cookie Max-Age</span>
+          <span class="value">600s</span>
+        </div>
+      </div>
+      <button onclick="doLogout()">Logout</button>
+    </section>
+
+    <!-- How it works -->
+    <section class="info">
+      <h2>How DBSC Works</h2>
+      <ol>
+        <li>Login sets a short-lived cookie (600s) and sends <code>Secure-Session-Registration</code> header</li>
+        <li>Chrome generates a TPM-bound key pair and registers it via <code>POST /dbsc/start</code></li>
+        <li>When the cookie expires, Chrome automatically refreshes it via <code>POST /dbsc/refresh</code></li>
+        <li>Refresh proves device possession via signed JWT &mdash; stolen cookies cannot be refreshed from another device</li>
+      </ol>
+    </section>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
