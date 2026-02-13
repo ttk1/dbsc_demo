@@ -127,7 +127,7 @@ def dbsc_refresh():
     token = request.headers.get("Secure-Session-Response", "").strip('"')
 
     if not session_id or session_id not in sessions:
-        return jsonify({"error": "Unknown session"}), 400
+        return jsonify({"session_identifier": session_id, "continue": False}), 200
 
     session = sessions[session_id]
 
