@@ -34,9 +34,6 @@ def _session_config(session_id):
         "scope": {
             "origin": "http://localhost:8080",
             "include_site": False,
-            "scope_specification": [
-                {"type": "include", "domain": "localhost", "path": "/"}
-            ],
         },
         "credentials": [
             {
