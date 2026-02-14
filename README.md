@@ -31,9 +31,11 @@ http://localhost:8080 を開き、`admin` / `password` でログインする。
 
 ## 動作確認
 
-1. ログイン後、DevTools の Network タブで `POST /dbsc/start` が呼ばれることを確認
+DBSC のリクエスト (`/dbsc/start`, `/dbsc/refresh`) は DevTools の Network タブには表示されない。サーバーのログ (`docker compose logs -f`) で確認する。
+
+1. ログイン後、サーバーログで `POST /dbsc/start` が呼ばれることを確認
 2. Cookie の Max-Age (600s) 経過前後に `POST /dbsc/refresh` が自動実行されることを確認
-3. `chrome://device-bound-sessions/` でセッション状態を確認
+3. DevTools の Application タブで `auth_cookie` を手動削除しても `POST /dbsc/refresh` が実行されることを確認
 
 ## プロトコルフロー
 
