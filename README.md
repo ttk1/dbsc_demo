@@ -1,6 +1,6 @@
 # DBSC Demo
 
-Chrome の [Device Bound Session Credentials (DBSC)](https://developer.chrome.com/docs/privacy-security/dbsc) の動作を確認するためのデモアプリケーション。
+Chrome の [Device Bound Session Credentials (DBSC)](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials) の動作を確認するためのデモアプリケーション。
 
 - 仕様: https://www.w3.org/TR/dbsc/
 - 仕様 日本語翻訳: [DBSC仕様書_日本語翻訳.md](DBSC仕様書_日本語翻訳.md) (Claude AI による翻訳・参考用)
