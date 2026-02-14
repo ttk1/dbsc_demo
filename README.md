@@ -30,7 +30,7 @@ http://localhost:8080 を開き、`admin` / `password` でログインする。
 ## 動作確認
 
 1. ログイン後、DevTools の Network タブで `POST /dbsc/start` が呼ばれることを確認
-2. Cookie の Max-Age (600s) 経過後に `POST /dbsc/refresh` が自動実行されることを確認
+2. Cookie の Max-Age (600s) 経過前後に `POST /dbsc/refresh` が自動実行されることを確認
 3. `chrome://device-bound-sessions/` でセッション状態を確認
 
 ## プロトコルフロー
@@ -44,14 +44,14 @@ Client                          Server
   |                               |
   |  POST /dbsc/start             |
   |  Secure-Session-Response: <JWT with public key>
-  |  <----  Session config JSON + Set-Cookie
+  |  <----  Session config JSON
 ```
 
 1. サーバーがログイン成功時に短寿命 Cookie と `Secure-Session-Registration` ヘッダーを返す
 2. Chrome が TPM 鍵ペアを生成し、公開鍵を含む ES256 署名付き JWT を `/dbsc/start` に送信
 3. サーバーが JWT を検証して公開鍵を保存し、セッション設定 JSON を返す
 
-### Refresh (Cookie 期限切れ時に Chrome が自動実行)
+### Refresh (Cookie 期限切れ前後に Chrome が自動実行)
 
 ```
 Client                          Server
@@ -61,18 +61,33 @@ Client                          Server
   |                               |
   |  POST /dbsc/refresh           |
   |  Secure-Session-Response: <signed JWT>
-  |  <----  200 + Set-Cookie
+  |  <----  200 + Set-Cookie + Secure-Session-Challenge header
 ```
 
 1. Chrome が `/dbsc/refresh` にセッション ID 付きでリクエスト
 2. サーバーが `403` と `Secure-Session-Challenge` ヘッダーで challenge を発行
 3. Chrome が challenge に署名して再リクエスト
-4. サーバーが JWT を検証し新しい Cookie を発行
+4. サーバーが JWT を検証し、新しい Cookie と次回用の challenge を発行
+
+## 仕様 (Working Draft) と Chrome 145 の実装差異
+
+DBSC 仕様はまだ W3C Working Draft の段階であり、Chrome の実装との間にいくつかの差異がある。この実装では Chrome の実際の挙動に合わせつつ、仕様準拠にもフォールバックする方針をとっている。
+
+| 項目 | 仕様 (§9.10) | Chrome 145 | この実装の対応 |
+|------|-------------|------------|--------------|
+| 登録 JWT の公開鍵の位置 | ペイロードの `key` クレーム | JWS ヘッダーの `jwk` パラメータ | `key` を優先、なければ `jwk` にフォールバック |
+| リフレッシュ JWT の `sub` クレーム | MUST (セッション識別子) | 含まれない | 検証しない |
+
+いずれもセキュリティ上の影響はない:
+
+- **公開鍵の位置**: JWT の署名をその公開鍵で検証するため、どこに含まれていても改ざんされていれば署名検証が失敗する
+- **`sub` の省略**: リフレッシュ時は `Sec-Secure-Session-Id` ヘッダーでセッションを特定し、そのセッションに紐づく公開鍵で署名を検証する。署名が通る = 正しいセッションの秘密鍵を持っているので、`sub` による二重確認は不要
 
 ## 実装上の注意点
 
-- `/dbsc/start` のレスポンスに含める `credentials.attributes` の値は、実際の `Set-Cookie` の属性と完全に一致させる必要がある。不一致だと Chrome がセッションを無視する
-- `credentials.attributes` に使える属性は `Domain`, `Path`, `Secure`, `HttpOnly`, `SameSite` の 5 つのみ。`Max-Age` 等を含めると Chrome がセッションを拒否する
+- `credentials.attributes` の値は実際の `Set-Cookie` の属性と一致させる必要がある (仕様 §8.6)。不一致だと Chrome がセッションを無視する。この実装では `COOKIE_ATTRS` を一元定義し、`set_cookie()` と `credentials.attributes` の両方をそこから生成することで不一致を防いでいる
+- 属性の一致判定に使われるのは `Domain`, `Path`, `Secure`, `HttpOnly`, `SameSite` の 5 つ。`Max-Age`/`Expires` はスコープ判定に関係しないため含めない
+- リフレッシュのタイミングはブラウザが Cookie の `Max-Age` を見て自動的に決定する。サーバーから直接制御するパラメータはない
 
 ## ファイル構成
 

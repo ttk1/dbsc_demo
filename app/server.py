@@ -15,16 +15,47 @@ app = Flask(__name__)
 COOKIE_NAME = "auth_cookie"
 COOKIE_MAX_AGE = 600  # seconds
 
+# Cookie 属性の一元定義。_set_auth_cookie() と _cookie_attributes_string() が
+# これを参照する。DBSC では credentials.attributes と実際の Set-Cookie 属性が
+# 一致しないと Chrome がセッションを無視するため、定義を一箇所にまとめている。
+COOKIE_ATTRS = {
+    "domain": "localhost",
+    "path": "/",
+    "httponly": True,
+    "samesite": "Lax",
+}
+
 
 def _set_auth_cookie(resp, value):
     resp.set_cookie(
         COOKIE_NAME,
         value,
         max_age=COOKIE_MAX_AGE,
-        domain="localhost",
-        httponly=True,
-        samesite="Lax",
+        domain=COOKIE_ATTRS["domain"],
+        path=COOKIE_ATTRS["path"],
+        httponly=COOKIE_ATTRS["httponly"],
+        samesite=COOKIE_ATTRS["samesite"],
     )
+
+
+def _cookie_attributes_string():
+    """COOKIE_ATTRS から DBSC credentials.attributes 用の文字列を生成する。
+
+    仕様 §8.6 で属性の一致判定に使われるのは Domain, Path, Secure, HttpOnly,
+    SameSite の 5 つ。Max-Age/Expires はスコープ判定に使われないため含めない。
+    """
+    parts = []
+    if COOKIE_ATTRS.get("domain"):
+        parts.append(f"Domain={COOKIE_ATTRS['domain']}")
+    if COOKIE_ATTRS.get("path"):
+        parts.append(f"Path={COOKIE_ATTRS['path']}")
+    if COOKIE_ATTRS.get("secure"):
+        parts.append("Secure")
+    if COOKIE_ATTRS.get("httponly"):
+        parts.append("HttpOnly")
+    if COOKIE_ATTRS.get("samesite"):
+        parts.append(f"SameSite={COOKIE_ATTRS['samesite']}")
+    return "; ".join(parts)
 
 
 def _session_config(session_id):
@@ -39,7 +70,7 @@ def _session_config(session_id):
             {
                 "type": "cookie",
                 "name": COOKIE_NAME,
-                "attributes": "Domain=localhost; Path=/; HttpOnly; SameSite=Lax",
+                "attributes": _cookie_attributes_string(),
             }
         ],
     }
@@ -64,8 +95,9 @@ def login():
     if data.get("username") != "admin" or data.get("password") != "password":
         return jsonify({"error": "Invalid credentials"}), 401
 
-    # Clear any existing sessions
+    # デモアプリのため全セッションをクリアする（マルチユーザー非対応）
     sessions.clear()
+    pending_registrations.clear()
 
     challenge = secrets.token_urlsafe(32)
     cookie_value = secrets.token_urlsafe(32)
@@ -89,7 +121,8 @@ def logout():
     for sid in [s for s, d in sessions.items() if d.get("cookie_value") == cookie]:
         del sessions[sid]
     resp = make_response(jsonify({"status": "ok"}))
-    resp.delete_cookie(COOKIE_NAME)
+    resp.delete_cookie(COOKIE_NAME, domain=COOKIE_ATTRS["domain"],
+                       path=COOKIE_ATTRS["path"])
     return resp
 
 
@@ -116,9 +149,7 @@ def dbsc_start():
         "created_at": time.time(),
     }
 
-    resp = make_response(jsonify(_session_config(session_id)))
-    _set_auth_cookie(resp, result["cookie_value"])
-    return resp
+    return jsonify(_session_config(session_id))
 
 
 @app.route("/dbsc/refresh", methods=["POST"])
