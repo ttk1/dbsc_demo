@@ -23,7 +23,7 @@ docker compose up --build
 
 - `Device Bound Session Credentials (Standard)`
 
-> Chrome 145 時点では「Default」や「Enabled」では動作しなかった。「Enabled - For developers」に設定する必要がある。
+> Chrome 145.0.7632.76 時点では「Default」や「Enabled」では動作しなかった。「Enabled - For developers」に設定する必要がある。
 
 ### 3. アクセス
 
