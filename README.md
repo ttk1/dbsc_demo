@@ -92,6 +92,7 @@ DBSC 仕様はまだ W3C Working Draft の段階であり、Chrome の実装と�
 - `credentials.attributes` の値は実際の `Set-Cookie` の属性と一致させる必要がある (仕様 §8.6)。不一致だと Chrome がセッションを無視する。この実装では `COOKIE_ATTRS` を一元定義し、`set_cookie()` と `credentials.attributes` の両方をそこから生成することで不一致を防いでいる
 - 属性の一致判定に使われるのは `Domain`, `Path`, `Secure`, `HttpOnly`, `SameSite` の 5 つ。`Max-Age`/`Expires` はスコープ判定に関係しないため含めない
 - リフレッシュのタイミングはブラウザが Cookie の `Max-Age` を見て自動的に決定する。サーバーから直接制御するパラメータはない
+- このデモには DBSC 非対応ブラウザ向けのフォールバックがない。DBSC 非対応の場合 `/dbsc/start` が呼ばれずサーバー側にセッションが作成されないため、ログインしても認証状態にならない。本番環境では DBSC 登録の有無に応じて Cookie の寿命やセッション管理を切り替えるなどの対応が必要
 
 ## ファイル構成
 
